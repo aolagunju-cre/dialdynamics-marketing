@@ -66,7 +66,7 @@ export default function CallPage() {
   function startCall() {
     if (!sessionId) return;
 
-    const vapi = new Vapi();
+    const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_KEY!);
     vapiRef.current = vapi;
 
     vapi.on("call-start", () => {
@@ -104,7 +104,8 @@ export default function CallPage() {
     });
 
     setCallStage("connecting");
-    vapi.start(process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID!);
+    vapi.start(process.env.NEXT_PUBLIC_VAPI_KEY!); // public key = token for initialization
+    // Note: pass assistant ID if using named assistant, or configure via Vapi dashboard
   }
 
   function endCallEarly() {
