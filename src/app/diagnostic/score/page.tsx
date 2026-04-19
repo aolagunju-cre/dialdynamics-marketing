@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 function ScoreRing({ score, scoreLabel }: { score: number; scoreLabel: string }) {
   const circumference = 2 * Math.PI * 66;
@@ -48,11 +50,13 @@ const CHALLENGE_LABELS: Record<string, string> = {
   interested: "I can't tell if they're actually interested",
 };
 
-export default function ScorePage() {
-  const router = useSearchParams();
-  const sessionId = router.get("sessionId") || "";
-  const referralCode = router.get("referralCode") || "";
-  const score = parseInt(router.get("score") || "0");
+function ScorePageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const sessionId = searchParams.get("sessionId") || "";
+  const referralCode = searchParams.get("referralCode") || "";
+  const score = parseInt(searchParams.get("score") || "0");
+  const challenge = searchParams.get("challenge") || "interrupted";
   const [showDrill, setShowDrill] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
@@ -76,7 +80,7 @@ export default function ScorePage() {
       await navigator.clipboard.writeText(url);
       alert("Link copied! Share it with a friend.");
     }
-    router.push(`/referrals?sessionId=${sessionId}&code=${referralCode}`);
+    window.location.href = `/referrals?sessionId=${sessionId}&code=${referralCode}`;
   }
 
   async function handlePay() {
@@ -105,7 +109,7 @@ export default function ScorePage() {
         <ScoreRing score={score} scoreLabel={scoreLabel} />
 
         <p className="text-center text-text-muted text-sm mb-6">
-          Cold call opener · {CHALLENGE_LABELS[router.get("challenge") || "interrupted"]}
+          Cold call opener · {CHALLENGE_LABELS[challenge] || CHALLENGE_LABELS.interrupted}
         </p>
 
         {/* Strengths & Improvements */}
@@ -242,5 +246,21 @@ export default function ScorePage() {
         )}
       </div>
     </main>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="animate-pulse text-lg">Loading...</div>
+    </div>
+  );
+}
+
+export default function ScorePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ScorePageInner />
+    </Suspense>
   );
 }

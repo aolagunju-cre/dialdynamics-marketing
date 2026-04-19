@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Vapi from "@vapi-ai/web";
 import { PERSONAS, getPersona } from "@/lib/vapi";
@@ -9,7 +9,9 @@ import { Card } from "@/components/ui/card";
 
 type CallStage = "idle" | "connecting" | "inProgress" | "complete";
 
-export default function CallPage() {
+export const dynamic = "force-dynamic";
+
+function CallPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") || "";
@@ -63,10 +65,11 @@ export default function CallPage() {
     }, 1500);
   }, [sessionId, referralCode, transcriptText, router]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function startCall() {
     if (!sessionId) return;
 
-    const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_KEY!);
+    const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID!);
     vapiRef.current = vapi;
 
     vapi.on("call-start" as any, () => {
@@ -103,16 +106,9 @@ export default function CallPage() {
       handleCallEnd();
     });
 
-    setCallStage("connecting");
-    vapi.start("4f6eeb64-29c3-42eb-9410-d79ea00556a5");
-    // Note: pass assistant ID if using named assistant, or configure via Vapi dashboard
-  }
+    vapi.start(persona.id);
 
-  function endCallEarly() {
-    if (vapiRef.current) {
-      vapiRef.current.stop();
-    }
-    handleCallEnd();
+    setCallStage("connecting");
   }
 
   useEffect(() => {
@@ -126,133 +122,135 @@ export default function CallPage() {
     };
   }, []);
 
-  const timerColor = seconds >= 25 ? "text-error" : seconds >= 20 ? "text-yellow-500" : "text-text";
+  // Show message if no session (e.g., direct navigation)
+  if (!sessionId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Card className="max-w-md w-full p-8 text-center">
+          <h2 className="text-xl font-semibold mb-2">No Session Found</h2>
+          <p className="text-muted-foreground mb-4">
+            Please start a call from the home page first.
+          </p>
+          <Button onClick={() => router.push("/")}>Go Home</Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b border-border">
-        <button
-          onClick={() => router.push("/")}
-          className="text-sm text-text-muted hover:text-text"
-        >
-          ← Back
-        </button>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-            <span className="text-white text-xs font-bold">DD</span>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        {callStage === "idle" && (
-          <>
-            {/* Persona Card */}
-            <Card className="w-full max-w-sm p-6 text-center mb-6">
-              <div className="w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4 flex items-center justify-center text-3xl">
-                📞
-              </div>
-              <h2 className="font-heading text-xl font-semibold mb-1">
-                {persona.name}
-              </h2>
-              <p className="text-sm text-text-muted mb-2">
-                {persona.title} @ {persona.company}
-              </p>
-              <span className="inline-block px-3 py-1 bg-primary/10 text-primary text-xs rounded-full">
-                {persona.personality}
-              </span>
-            </Card>
-
-            {/* Pre-call brief */}
-            <Card className="w-full max-w-sm p-4 mb-6 border-dashed border-2">
-              <p className="text-sm text-text text-center leading-relaxed">
-                {persona.setupLine}
-              </p>
-            </Card>
-
-            <p className="text-xs text-text-muted text-center mb-6">
-              Your challenge:{" "}
-              <span className="text-text font-medium">
-                {challenge.replace("_", " ")}
-              </span>
-            </p>
-
-            <Button
-              onClick={startCall}
-              className="w-full max-w-sm h-14 bg-accent hover:bg-accent-hover text-text font-semibold text-base rounded-xl"
+    <div className="flex min-h-screen flex-col items-center justify-center p-6">
+      <Card className="max-w-md w-full p-8">
+        {/* Persona info */}
+        <div className="mb-6 text-center">
+          <div className="flex justify-center mb-4">
+            <div
+              className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold"
+              style={{ backgroundColor: persona.id === "sarah" ? "#6366f1" : persona.id === "marcus" ? "#059669" : persona.id === "priya" ? "#d97706" : "#8b5cf6" }}
             >
-              TAP TO START CALL
-            </Button>
-          </>
-        )}
-
-        {callStage === "connecting" && (
-          <div className="text-center">
-            <div className="w-24 h-24 rounded-full bg-primary/10 mx-auto mb-6 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-primary/20 animate-pulse" />
+              {persona.name.charAt(0)}
             </div>
-            <p className="text-text-muted text-sm">Connecting...</p>
+          </div>
+          <h1 className="text-xl font-semibold">{persona.name}</h1>
+          <p className="text-sm text-muted-foreground">{persona.title}</p>
+        </div>
+
+        {/* Challenge display */}
+        {challenge && (
+          <div className="mb-4 p-3 bg-muted rounded-lg text-center">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Scenario
+            </span>
+            <p className="font-medium">{persona.setupLine}</p>
           </div>
         )}
 
-        {callStage === "inProgress" && (
-          <div className="w-full max-w-sm">
-            {/* Timer */}
-            <div className="text-center mb-6">
-              <span className={`font-mono text-3xl font-bold ${timerColor}`}>
-                {seconds}s / 30s
-              </span>
-            </div>
-
-            {/* Waveform */}
-            <div className="flex justify-center mb-6">
-              <div className="waveform">
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} className="waveform-bar" />
-                ))}
-              </div>
-            </div>
-
-            {/* Transcript */}
-            <Card className="p-4 mb-6 min-h-[100px]">
-              <p className="text-xs text-text-muted mb-2 font-medium">
-                Live transcript
+        {/* Call status */}
+        <div className="mb-8 text-center">
+          {callStage === "idle" && (
+            <>
+              <p className="text-muted-foreground mb-4">
+                This is a <strong>30-second practice call</strong>. The AI will
+                evaluate your cold call opener and first few questions.
               </p>
-              {transcript.length === 0 ? (
-                <p className="text-sm text-text-muted italic">
-                  Start talking...
-                </p>
-              ) : (
-                <p className="text-sm text-text leading-relaxed">
-                  {transcript[transcript.length - 1] || ""}
+              <Button onClick={startCall} size="lg" className="w-full">
+                Start Practice Call
+              </Button>
+            </>
+          )}
+
+          {callStage === "connecting" && (
+            <div className="py-4">
+              <div className="animate-pulse text-lg">Connecting...</div>
+            </div>
+          )}
+
+          {callStage === "inProgress" && (
+            <div className="py-4">
+              <div className="text-4xl font-bold mb-2">{seconds}s / 30s</div>
+              <p className="text-muted-foreground text-sm">
+                Speak naturally — the AI is listening
+              </p>
+              {seconds >= 25 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ending soon...
                 </p>
               )}
-            </Card>
-
-            {/* End early */}
-            <Button
-              onClick={endCallEarly}
-              variant="outline"
-              className="w-full h-11 border-error/50 text-error hover:bg-error/10"
-            >
-              End Call Early
-            </Button>
-          </div>
-        )}
-
-        {callStage === "complete" && (
-          <div className="text-center">
-            <div className="w-24 h-24 rounded-full bg-success/10 mx-auto mb-6 flex items-center justify-center">
-              <span className="text-4xl">✓</span>
             </div>
-            <p className="text-text font-medium mb-2">Call complete!</p>
-            <p className="text-text-muted text-sm">
-              Calculating your score...
-            </p>
+          )}
+
+          {callStage === "complete" && (
+            <div className="py-4">
+              <div className="text-2xl font-bold text-green-600 mb-2">
+                Call Complete!
+              </div>
+              <p className="text-muted-foreground">Calculating your score...</p>
+            </div>
+          )}
+        </div>
+
+        {/* Transcript (scrollable) */}
+        {callStage === "inProgress" && transcript.length > 0 && (
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-medium mb-2">Live Transcript</h3>
+            <div className="bg-muted rounded-lg p-3 max-h-40 overflow-y-auto">
+              {transcript.map((line, i) => (
+                <p key={i} className="text-sm mb-1">
+                  {line}
+                </p>
+              ))}
+            </div>
           </div>
         )}
-      </div>
-    </main>
+      </Card>
+
+      {/* Help text */}
+      <p className="mt-4 text-sm text-muted-foreground text-center max-w-md">
+        Need help? Check out our{" "}
+        <a href="/diagnostic" className="underline">
+          diagnostic guide
+        </a>{" "}
+        or{" "}
+        <a href="/resources" className="underline">
+          practice tips
+        </a>
+        .
+      </p>
+    </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="animate-pulse text-lg">Loading...</div>
+    </div>
+  );
+}
+
+export default function CallPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <CallPageInner />
+    </Suspense>
   );
 }

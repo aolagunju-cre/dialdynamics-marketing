@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-export default function ReferralsPage() {
+export const dynamic = "force-dynamic";
+
+function ReferralsPageInner() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") || "";
   const code = searchParams.get("code") || "";
@@ -149,5 +151,21 @@ export default function ReferralsPage() {
         </Card>
       </div>
     </main>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="animate-pulse text-lg">Loading...</div>
+    </div>
+  );
+}
+
+export default function ReferralsPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ReferralsPageInner />
+    </Suspense>
   );
 }

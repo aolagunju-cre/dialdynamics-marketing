@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-export default function PaySuccessPage() {
+export const dynamic = "force-dynamic";
+
+function PaySuccessPageInner() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id") || "";
   const [accessGranted, setAccessGranted] = useState(false);
 
   useEffect(() => {
     if (sessionId) {
-      // Access is granted via webhook - this page just confirms
       setAccessGranted(true);
     }
   }, [sessionId]);
@@ -36,5 +37,21 @@ export default function PaySuccessPage() {
         </Button>
       </div>
     </main>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="animate-pulse text-lg">Loading...</div>
+    </div>
+  );
+}
+
+export default function PaySuccessPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <PaySuccessPageInner />
+    </Suspense>
   );
 }

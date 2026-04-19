@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-export default function JoinPage() {
+export const dynamic = "force-dynamic";
+
+function JoinPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get("code") || "";
@@ -79,5 +81,21 @@ export default function JoinPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="animate-pulse text-lg">Loading...</div>
+    </div>
+  );
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <JoinPageInner />
+    </Suspense>
   );
 }
