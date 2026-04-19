@@ -89,7 +89,7 @@ export default function CallPage() {
       handleCallEnd();
     });
 
-    vapi.on("speech-update", (msg: any) => {
+    vapi.on("speech-update" as any, (msg: any) => {
       if (msg.transcript) {
         setTranscript((prev) => [...prev.slice(-20), msg.transcript]);
         setTranscriptText((prev) => prev + " " + msg.transcript);
