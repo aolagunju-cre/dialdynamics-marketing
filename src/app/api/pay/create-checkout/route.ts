@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-03-25.dahlia",
-});
-
 export async function POST(req: NextRequest) {
   try {
     const { sessionId } = await req.json();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+    const key: string = process.env.STRIPE_SECRET_KEY ?? "";
+    if (!key) {
+      return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stripe = new Stripe(key as any);
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",

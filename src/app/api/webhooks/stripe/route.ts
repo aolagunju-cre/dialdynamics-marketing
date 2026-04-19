@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { db } from "@/lib/db";
 import { sessionAccess, accessLogs } from "@/lib/schema";
-import { eq } from "drizzle-orm";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-03-25.dahlia",
-});
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -16,13 +11,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No signature" }, { status: 400 });
   }
 
+  const key: string = process.env.STRIPE_SECRET_KEY ?? "";
+  if (!key) {
+    return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stripe = new Stripe(key as any);
+
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET ?? ""
     );
   } catch (err: any) {
     console.error("Webhook signature error:", err.message);
@@ -34,14 +36,12 @@ export async function POST(req: NextRequest) {
     const odSessionId = session.metadata?.sessionId;
 
     if (odSessionId) {
-      // Grant toolkit access
       await db.insert(sessionAccess).values({
         sessionId: odSessionId,
         accessType: "toolkit",
         stripePaymentId: session.id,
       });
 
-      // Log event
       await db.insert(accessLogs).values({
         sessionId: odSessionId,
         event: "toolkit_purchased",
