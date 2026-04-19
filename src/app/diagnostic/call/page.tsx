@@ -92,8 +92,9 @@ function CallPageInner() {
       handleCallEnd();
     });
 
-    vapi.on("speech-update" as any, (msg: any) => {
-      if (msg.transcript) {
+    // Use 'message' event with transcript type - per Vapi Web SDK docs
+    vapi.on("message" as any, (msg: any) => {
+      if (msg.type === "transcript" && msg.transcript) {
         setTranscript((prev) => [...prev.slice(-20), msg.transcript]);
         setTranscriptText((prev) => prev + " " + msg.transcript);
       }
