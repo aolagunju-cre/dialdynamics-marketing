@@ -104,7 +104,7 @@ export default function CallPage() {
     });
 
     setCallStage("connecting");
-    vapi.start(process.env.NEXT_PUBLIC_VAPI_KEY!); // public key = token for initialization
+    vapi.start("4f6eeb64-29c3-42eb-9410-d79ea00556a5");
     // Note: pass assistant ID if using named assistant, or configure via Vapi dashboard
   }
 
