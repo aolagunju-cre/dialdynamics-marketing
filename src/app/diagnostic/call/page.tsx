@@ -69,7 +69,7 @@ export default function CallPage() {
     const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_KEY!);
     vapiRef.current = vapi;
 
-    vapi.on("call-start", () => {
+    vapi.on("call-start" as any, () => {
       setCallStage("inProgress");
       setSeconds(0);
 
@@ -85,7 +85,7 @@ export default function CallPage() {
       }, 1000);
     });
 
-    vapi.on("call-end", () => {
+    vapi.on("call-end" as any, () => {
       handleCallEnd();
     });
 
@@ -96,7 +96,7 @@ export default function CallPage() {
       }
     });
 
-    vapi.on("error", (e: any) => {
+    vapi.on("error" as any, (e: any) => {
       console.error("Vapi error:", e);
       if (timerRef.current) clearInterval(timerRef.current);
       // Fallback: redirect to score anyway
